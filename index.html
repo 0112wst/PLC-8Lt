@@ -1,0 +1,254 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLC课堂仿真：8路Q输出 + 共阴极七段数码管</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #e6f4fc;
+            margin: 0;
+            padding: 20px;
+        }
+        .console {
+            background: #d6eaf8;
+            border: 3px solid #6096ba;
+            border-radius: 16px;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            box-shadow: 0 4px 12px #a0c8e4;
+        }
+        h2 {
+            text-align: center;
+            color: #2b4865;
+            margin-top:0;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap:24px;
+            align-items: flex-start;
+            margin-bottom:24px;
+        }
+        .panel {
+            flex:1;
+            min-width:280px;
+            background:#f0f8fd;
+            border:2px solid #8ab4d8;
+            border-radius:12px;
+            padding:16px;
+        }
+        /*=====七段数码管样式=====*/
+        .seven-seg {
+            position: relative;
+            width:160px;
+            height:280px;
+            margin:0 auto;
+            background:#111;
+            border-radius:12px;
+            padding:10px;
+        }
+        .seg {
+            position:absolute;
+            background:#222;
+            transition: background 0.2s;
+        }
+        .seg.on {
+            background:#ffdd00;
+            box-shadow: 0 0 12px #ffdd00;
+        }
+        .seg-a{top:10px;left:30px;width:100px;height:12px;}
+        .seg-b{top:20px;right:10px;width:12px;height:80px;}
+        .seg-c{bottom:20px;right:10px;width:12px;height:80px;}
+        .seg-d{bottom:10px;left:30px;width:100px;height:12px;}
+        .seg-e{bottom:20px;left:10px;width:12px;height:80px;}
+        .seg-f{top:20px;left:10px;width:12px;height:80px;}
+        .seg-g{top:135px;left:30px;width:100px;height:12px;}
+        .seg-dp{bottom:14px;right:22px;width:14px;height:14px;border-radius:50%;}
+
+        /*=====PLC Q指示灯=====*/
+        .q-list{
+            display:grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap:10px;
+        }
+        .q-item{
+            display:flex;
+            align-items:center;
+            gap:8px;
+            background:#fff;
+            padding:8px;
+            border-radius:8px;
+            border:1px solid #b2d5ec;
+        }
+        .led{
+            width:22px;height:22px;
+            border-radius:50%;
+            background:#999;
+            transition:0.2s;
+        }
+        .led.on{
+            background:#39d353;
+            box-shadow:0 0 10px #39d353;
+        }
+        /*数字按键*/
+        .num-buttons{
+            display:grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap:8px;
+            margin-top:12px;
+        }
+        button{
+            padding:10px;
+            font-size:18px;
+            border:none;
+            border-radius:8px;
+            background:#74a9d8;
+            color:white;
+            cursor:pointer;
+        }
+        button:hover{background:#588cb9;}
+        input[type="text"]{
+            width:100%;
+            padding:10px;
+            font-size:20px;
+            border:2px solid #8ab4d8;
+            border-radius:8px;
+            margin:8px 0;
+        }
+        .info-line{
+            font-size:16px;
+            margin:8px 0;
+            font-family:Consolas,monospace;
+            color:#1a3b5c;
+        }
+    </style>
+</head>
+<body>
+<div class="console">
+    <h2>PLC仿真：共阴极七段数码管 + Q0.0~Q0.7输出</h2>
+    <div class="row">
+        <!-- 数码管区域 -->
+        <div class="panel">
+            <h3 style="text-align:center">七段数码管(a b c d e f g dp)</h3>
+            <div class="seven-seg">
+                <div class="seg seg-a" data-seg="0"></div>
+                <div class="seg seg-b" data-seg="1"></div>
+                <div class="seg seg-c" data-seg="2"></div>
+                <div class="seg seg-d" data-seg="3"></div>
+                <div class="seg seg-e" data-seg="4"></div>
+                <div class="seg seg-f" data-seg="5"></div>
+                <div class="seg seg-g" data-seg="6"></div>
+                <div class="seg seg-dp" data-seg="7"></div>
+            </div>
+        </div>
+        <!-- PLC Q输出指示灯 -->
+        <div class="panel">
+            <h3>PLC输出 Q0.0 ~ Q0.7</h3>
+            <div class="q-list" id="qPanel">
+                <!-- JS自动生成8路Q -->
+            </div>
+            <div class="info-line">当前数字：<span id="valNum">0</span></div>
+            <div class="info-line">8位二进制段码：<span id="binStr">00111111</span></div>
+            <div class="info-line">十六进制段码：0x<span id="hexStr">3F</span></div>
+        </div>
+    </div>
+    <!-- 输入控制区 -->
+    <div class="panel">
+        <h3>数字输入（仅0~9有效）</h3>
+        <input type="text" id="numInput" placeholder="输入0-9，键盘可直接输入">
+        <div class="num-buttons">
+            <button onclick="setNum(0)">0</button>
+            <button onclick="setNum(1)">1</button>
+            <button onclick="setNum(2)">2</button>
+            <button onclick="setNum(3)">3</button>
+            <button onclick="setNum(4)">4</button>
+            <button onclick="setNum(5)">5</button>
+            <button onclick="setNum(6)">6</button>
+            <button onclick="setNum(7)">7</button>
+            <button onclick="setNum(8)">8</button>
+            <button onclick="setNum(9)">9</button>
+        </div>
+        <p style="color:#2b4865;margin:10px 0 0;">说明：共阴极，1=点亮；Q0.0=a，Q0.1=b，Q0.2=c，Q0.3=d，Q0.4=e，Q0.5=f，Q0.6=g，Q0.7=dp小数点</p >
+    </div>
+</div>
+
+<script>
+    // ========== 共阴极七段码表 Q0.0=a Q0.1=b Q0.2=c Q0.3=d Q0.4=e Q0.5=f Q0.6=g Q0.7=dp ==========
+    // 索引=数字，值=8bit段码  bit0:a bit1:b bit2:c bit3:d bit4:e bit5:f bit6:g bit7:dp
+    const segTable = [
+        0b00111111, // 0: a,b,c,d,e,f亮 g灭 dp灭 → 0x3F
+        0b00000110, // 1: b,c亮 →0x06
+        0b01011011, // 2:a,b,g,e,d →0x5B
+        0b01001111, // 3:a,b,g,c,d →0x4F
+        0b01100110, // 4:f,g,b,c →0x66
+        0b01101101, // 5:a,f,g,c,d →0x6D
+        0b01111101, // 6:a,f,g,c,d,e →0x7D
+        0b00000111, // 7:a,b,c →0x07
+        0b01111111, // 8:全部段亮，dp灭 →0x7F
+        0b01101111  // 9:a,b,c,d,f,g →0x6F
+    ];
+
+    // 创建Q0.0~Q0.7指示灯DOM
+    const qPanel = document.getElementById("qPanel");
+    const qNames = ["Q0.0(a)","Q0.1(b)","Q0.2(c)","Q0.3(d)","Q0.4(e)","Q0.5(f)","Q0.6(g)","Q0.7(dp)"];
+    for(let i=0;i<8;i++){
+        let div = document.createElement("div");
+        div.className="q-item";
+        div.innerHTML = `<div class="led" id="led${i}"></div><span>${qNames[i]}</span>`;
+        qPanel.appendChild(div);
+    }
+
+    // 设置数字，更新数码管+指示灯
+    function setNum(n){
+        if(isNaN(n) || n<0 || n>9) return;
+        n = parseInt(n);
+        let code = segTable[n];
+
+        // 更新页面文本信息
+        document.getElementById("valNum").innerText = n;
+        let bin = code.toString(2).padStart(8,"0");
+        document.getElementById("binStr").innerText = bin;
+        document.getElementById("hexStr").innerText = code.toString(16).toUpperCase().padStart(2,"0");
+        document.getElementById("numInput").value = n;
+
+        // 更新七段每一段
+        let segs = document.querySelectorAll(".seg");
+        for(let i=0;i<8;i++){
+            let bitOn = (code >> i) & 1;
+            if(bitOn){
+                segs[i].classList.add("on");
+                document.getElementById(`led${i}`).classList.add("on");
+            }else{
+                segs[i].classList.remove("on");
+                document.getElementById(`led${i}`).classList.remove("on");
+            }
+        }
+    }
+
+    // 输入框事件
+    const input = document.getElementById("numInput");
+    input.addEventListener("input",function(){
+        let val = this.value.trim();
+        if(/^[0-9]$/.test(val)){
+            setNum(val);
+        }
+    })
+    input.addEventListener("keydown",function(e){
+        if(e.key === "Enter"){
+            let val = this.value.trim();
+            if(/^[0-9]$/.test(val)) setNum(val);
+        }
+    })
+
+    // 页面初始化默认显示0
+    setNum(0);
+</script>
+</body>
+</html>
